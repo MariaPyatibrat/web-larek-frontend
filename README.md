@@ -5,7 +5,7 @@
 2. Технологический стек
 3. Структура проекта
 4. Важные файлы
-4. Базовые классы и их назначение
+4. API документация
 5. Компоненты системы
 6. Архитектуры проекта
 7. UML-диаграмма
@@ -28,6 +28,14 @@
 - src/ — исходные файлы проекта
 - src/components/ — папка с JS компонентами
 - src/components/base/ — папка с базовым кодом
+- src/docs - схемы для документация проекта
+- src/images - графические ресурсы
+- src/pages - страницы приложения
+- src/public - статические ресурсы
+- src/scss - стили проекта
+- src/types - типы TypeScript
+- src/utils - вспомогательные утилиты
+- src/vendor -  сторонние библиотеки
 
 ## Важные файлы:
 - src/pages/index.html — HTML-файл главной страницы
@@ -37,7 +45,7 @@
 - src/utils/constants.ts — файл с константами
 - src/utils/utils.ts — файл с утилитами
 
-## Базовые классы и их назначение
+## API документация
 
 ### EventEmitter
 
@@ -48,10 +56,17 @@
 * Генерация событий (emit)
 * Управление списком подписчиков
 ```
-// Пример использования
-events.on('basket:updated', (items) => {
-updateBasketView(items);
-});
+/**
+ * Центральная шина событий
+ * @method on - Подписка на событие
+ * @method off - Отписка от события
+ * @method emit - Генерация события
+ */
+class EventEmitter {
+  on(event: string, callback: Function): void;
+  off(event: string, callback: Function): void;
+  emit(event: string, ...args: any[]): void;
+}
 ```
 
 ### ProductModel
@@ -63,6 +78,21 @@ updateBasketView(items);
 * Поиск товара по ID (getProduct)
 * Фильтрация товаров (filterProducts)
 
+```
+class ProductModel {
+  /**
+   * Загружает каталог товаров
+   * @emits products:loaded - После загрузки
+   */
+  loadProducts(): Promise<void>;
+  
+  /**
+   * Получает товар по ID
+   */
+  getProduct(id: string): Product | undefined;
+}
+```
+
 ### BasketModel
 
 **Назначение:** Управление корзиной покупок
@@ -73,6 +103,20 @@ updateBasketView(items);
 * Очистка корзины (clear)
 * Автосохранение состояния в localStorage
 
+```
+class BasketModel {
+  /**
+   * Добавляет товар в корзину
+   * @emits basket:updated - После изменения
+   */
+  add(productId: string): void;
+  
+  /**
+   * Рассчитывает общую сумму
+   */
+  getTotal(): number;
+}
+```
 ## Компоненты системы
 
 ### ProductCard
@@ -120,6 +164,8 @@ updateBasketView(items);
 * Передача событий между компонентами
 * Управление потоком данных
 
+![UML-диаграмма архитектуры](src/docs/parts_of_the_system.png)
+
 ### Взаимодействие компонентов:
 
 * Пользовательские действия обрабатываются View
@@ -153,6 +199,20 @@ paymentMethod: 'card' | 'cash';
 }
 ```
 ## UML-диаграмма
+### Ключевые сценарии:
+
+#### Добавление товара в корзину:
+1. Пользователь кликает кнопку в ProductCard
+2. Генерация события `product:add`
+3. BasketModel обновляет состояние
+4. Рассылка события `basket:updated`
+5. BasketView и Header обновляют интерфейс
+
+#### Оформление заказа:
+1. Заполнение CheckoutForm
+2. Валидация через OrderModel
+3. Отправка данных на сервер
+4. Очистка корзины при успехе
 
 ![UML-диаграмма архитектуры](src/docs/diagram.png)
 
