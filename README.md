@@ -8,9 +8,10 @@
 4. API документация
 5. Компоненты системы
 6. Архитектуры проекта
-7. UML-диаграмма
-8. Процессы в приложении
-9. Запуск и сборка
+7. Типы данных
+8. UML-диаграмма
+9. Процессы в приложении
+10. Запуск и сборка
 
 ## Обзор архитектуры
 Проект реализован с использованием паттерна MVP (Model-View-Presenter). Архитектура обеспечивает четкое разделение ответственности между компонентами:
@@ -56,12 +57,6 @@
 * Генерация событий (emit)
 * Управление списком подписчиков
 ```
-/**
- * Центральная шина событий
- * @method on - Подписка на событие
- * @method off - Отписка от события
- * @method emit - Генерация события
- */
 class EventEmitter {
   on(event: string, callback: Function): void;
   off(event: string, callback: Function): void;
@@ -80,15 +75,7 @@ class EventEmitter {
 
 ```
 class ProductModel {
-  /**
-   * Загружает каталог товаров
-   * @emits products:loaded - После загрузки
-   */
   loadProducts(): Promise<void>;
-  
-  /**
-   * Получает товар по ID
-   */
   getProduct(id: string): Product | undefined;
 }
 ```
@@ -105,15 +92,7 @@ class ProductModel {
 
 ```
 class BasketModel {
-  /**
-   * Добавляет товар в корзину
-   * @emits basket:updated - После изменения
-   */
   add(productId: string): void;
-  
-  /**
-   * Рассчитывает общую сумму
-   */
   getTotal(): number;
 }
 ```
@@ -176,26 +155,69 @@ class BasketModel {
 ## Типы данных
 ### Основные интерфейсы:
 ```
-interface Product {
-id: string;
-title: string;
-price: number;
-description: string;
-image: string;
-category: string;
+export interface Product {
+    id: string;
+    title: string;
+    price: number;
+    description: string;
+    image: string;
+    category: string;
 }
 
-interface CartItem {
-productId: string;
-quantity: number;
+export interface CartItem {
+    productId: string;
+    quantity: number;
 }
 
-interface OrderData {
-items: CartItem[];
-address: string;
-email: string;
-phone: string;
-paymentMethod: 'card' | 'cash';
+export interface OrderData {
+    items: CartItem[];
+    address: string;
+    email: string;
+    phone: string;
+    paymentMethod: 'card' | 'cash';
+}
+```
+### Интерфейсы моделей:
+```
+export interface IProductModel {
+    items: Product[];
+    loadProducts(): Promise<void>;
+    getProduct(id: string): Product | undefined;
+    filterProducts(criteria: Record<string, unknown>): Product[];
+}
+
+export interface IBasketModel {
+    items: Map<string, number>;
+    add(id: string): void;
+    remove(id: string): void;
+    clear(): void;
+    getTotal(): number;
+}
+
+export interface IOrderModel {
+    createOrder(data: OrderData): Promise<void>;
+    validateOrder(data: OrderData): boolean;
+}
+```
+### Интерфейсы представлений:
+```
+export interface IView {
+    render(data?: object): HTMLElement;
+}
+
+export interface IProductCard extends IView {
+    product: Product;
+    onClick(): void;
+}
+
+export interface IBasketView extends IView {
+    items: CartItem[];
+    updateCounter(count: number): void;
+}
+
+export interface ICheckoutForm extends IView {
+    formData: OrderData;
+    onSubmit(): void;
 }
 ```
 ## UML-диаграмма
