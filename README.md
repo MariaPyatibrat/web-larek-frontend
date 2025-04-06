@@ -59,10 +59,9 @@
 **Назначение:** Управление элементами главной страницы
 
 **Функции:**
-* Отображение товаров в галерее.
-* Управление кнопкой корзины (header__basket) и счётчиком товаров (header__basket-counter).
-* Обновление счётчика корзины при изменении количества товаров.
-* Не зависит от структуры карточек товаров, работает с массивом данных.
+* Подписка на события обновления счетчика корзины.
+* Автоматическое обновление UI через сеттер.
+* Реактивное отображение изменений.
 
 **Поля:**
 * basketButton (элемент с классом "header__basket")
@@ -71,9 +70,16 @@
 **Методы:**
 ```
 class MainPageView {
-  renderProducts(products: Product[]): void;
-  updateBasketCounter(count: number): void;
-  setBasketClickHandler(handler: Function): void;
+  constructor(eventEmitter: EventEmitter) {
+    eventEmitter.on('basket:counter-updated', (count) => {
+      this.basketCount = count;
+    });
+  }
+
+  set basketCount(count: number) {
+    this.basketCounter.textContent = String(count);
+    this.basketCounter.style.display = count > 0 ? 'block' : 'none';
+  }
 }
 ```
 ### EventEmitter
@@ -123,15 +129,30 @@ class ProductModel {
 **Назначение:** Управление корзиной покупок
 
 **Функции:**
-* Добавление/удаление товаров (add, remove)
-* Расчет общей суммы (getTotal)
-* Очистка корзины (clear)
+* Хранение текущего состояния корзины (Map<id товара, количество>)
+* Выполнение базовых операций с корзиной (добавление/удаление товаров)
 * Автосохранение состояния в localStorage
+* Расчет и обновление количества товаров в корзине
+* Уведомление об изменениях через EventEmitter
 
 ```
 class BasketModel {
-  add(productId: string): void;
-  getTotal(): number;
+  add(productId: string): void {
+    const currentCount = this.items.get(productId) || 0;
+    this.items.set(productId, currentCount + 1);
+    
+    const totalCount = this.calculateTotalCount();
+    
+    this.saveToStorage();
+    
+    this.emit('basket:counter-updated', totalCount);
+    this.emit('basket:items-updated', this.items);
+  }
+
+  // Вспомогательный метод для расчета общего количества
+  private calculateTotalCount(): number {
+    return Array.from(this.items.values()).reduce((sum, qty) => sum + qty, 0);
+  }
 }
 ```
 ## Компоненты системы
@@ -181,9 +202,15 @@ render(productData: Product): HTMLElement
 * Отображение общей суммы
 * Обновление счетчика товаров
 
-**Связи:**
-* Подписывается на события BasketModel через EventEmitter
-* Отображает данные из BasketModel
+**Реактивный подход:**
+
+* Обновление состояния корзины происходит в BasketModel, который генерирует событие через EventEmitter. MainPageView и BasketView подписываются на это событие и обновляют интерфейс автоматически, что позволяет поддерживать актуальные данные без необходимости вручную синхронизировать состояния.
+```
+class BasketView {
+  updateItems(items: CartItem[]): void;
+  updateTotal(sum: number): void;
+}
+```
 
 ### Связь между MainPageView и BasketView
 * MainPageView управляет кнопкой корзины и счётчиком товаров.
@@ -472,18 +499,103 @@ interface OrderData {
 
 ### 1. Загрузка главной страницы:
 
-* MainPageView инициализирует элементы header
-* ProductModel загружает данные с сервера
-* MainPageView получает массив товаров
-* Для каждого товара создаётся ProductCard с шаблоном галереи
-* Карточки рендерятся в галерее
+* Инициализация UI:
+1. MainPageView создает элементы интерфейса:
+
+   *Кнопку корзины (header__basket)*
+
+   *Счетчик товаров (header__basket-counter), скрытый по умолчанию*
+
+   *Контейнер для галереи товаров*
+
+* Загрузка данных:
+
+1. ProductModel выполняет запрос к API для получения каталога товаров
+
+2. После получения данных генерирует событие products:loaded с массивом товаров
+
+* Отрисовка товаров:
+
+1. MainPageView подписывается на products:loaded
+
+2. Для каждого товара создает экземпляр ProductCard в режиме "галерея":
+
+*Устанавливает обработчики событий:*
+
+   1. "Добавить в корзину" → product:add
+
+   2. "Просмотр деталей" → product:view
+
+*Добавляет карточку в галерею*
+
+* Инициализация корзины:
+
+1. BasketModel загружает сохраненное состояние из localStorage
+
+2. Если есть товары, генерирует событие basket:updated с текущим состоянием (Map)
 
 ### 2. Работа с корзиной:
 
-* Клик по кнопке в ProductCard → событие в EventEmitter
-* BasketModel обновляет состояние
-* MainPageView получает событие и обновляет счётчик
-* BasketView обновляет список товаров (если открыт)
+* Добавление товара:
+
+1. Инициация действия:
+
+*Пользователь кликает "Добавить" в ProductCard*
+
+*Генерируется событие product:add с ID товара*
+
+2. Обработка в модели:
+
+* BasketModel:
+
+  *Увеличивает количество товара (или добавляет новый)*
+
+  *Рассчитывает общее количество товаров через метод calculateTotalCount()*
+
+  *Сохраняет обновленное состояние в localStorage*
+
+  *Генерирует событие basket:counter-updated с новым количеством*
+
+  *Генерирует событие basket:items-updated с обновленным Map товаров*
+
+* Обновление интерфейса:
+
+1. MainPageView:
+
+  *Получает новое количество через basket:counter-updated*
+
+  *Автоматически обновляет счетчик через сеттер basketCount*
+
+2. BasketView (если открыт):
+
+  *Получает обновленные данные через basket:items-updated*
+
+  *Для каждого товара запрашивает детали через ProductModel*
+
+  *Создает ProductCard в режиме "корзина*
+
+  *Пересчитывает сумму через BasketModel.getTotal()*
+
+* Удаление товара:
+
+  1. Обработка в модели:
+
+  * BasketModel:
+
+  *Уменьшает количество товара*
+
+  *При нулевом количестве удаляет товар из Map*
+
+  *Если корзина пуста, генерирует basket:counter-updated с 0*
+
+  *Генерирует basket:items-updated с пустым Map*
+
+  2. Обновление интерфейса:
+
+  *MainPageView скрывает счетчик при получении 0*
+
+  *BasketView обновляет список и сумму*
+
 
 
 ## Установка и запуск
