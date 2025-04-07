@@ -1,16 +1,23 @@
 import { EventEmitter } from '../base/events';
-
-export interface Product {
-    id: string;
-    title: string;
-    price: number;
-    description: string;
-    image: string;
-    category: string;
-}
+import { IProduct } from '../../types';
+import { ShopAPI } from '../ShopApi';
 
 export class ProductModel {
-    constructor(private events: EventEmitter) {}
+    private products: IProduct[] = [];
 
-    // Реализация методов модели
+    constructor(private events: EventEmitter, private api: ShopAPI) {}
+
+    async load(): Promise<void> {
+        try {
+            this.products = await this.api.getProductList();
+            this.events.emit('products:loaded', this.products);
+        } catch (error) {
+            console.error('Ошибка при загрузке продуктов:', error);
+            throw error;
+        }
+    }
+
+    getProductById(id: string): IProduct | undefined {
+        return this.products.find(item => item.id === id);
+    }
 }

@@ -9,18 +9,23 @@ export class ShopAPI extends Api {
         this.cdn = cdn;
     }
 
-    getProductList(): Promise<IProduct[]> {
-        return this.get('/product').then((data: ApiListResponse<IProduct>) =>
-            data.items.map(item => ({
-                ...item,
-                image: this.cdn + item.image
-            }))
-        );
+    async getProductList(): Promise<IProduct[]> {
+        const response = await this.get('/product');
+        if (!response || !(response as ApiListResponse<IProduct>).items) {
+            throw new Error('Неверный формат данных продуктов');
+        }
+        const data = response as ApiListResponse<IProduct>;
+        return data.items.map(item => ({
+            ...item,
+            image: this.cdn + item.image
+        }));
     }
 
-    createOrder(order: IOrder): Promise<IOrderResult> {
-        return this.post('/order', order).then(
-            (data: IOrderResult) => data
-        );
+    async createOrder(order: IOrder): Promise<IOrderResult> {
+        const response = await this.post('/order', order);
+        if (!response || !(response as IOrderResult).id) {
+            throw new Error('Неверный формат данных заказа');
+        }
+        return response as IOrderResult;
     }
 }

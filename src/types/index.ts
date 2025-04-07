@@ -1,3 +1,5 @@
+// src/types/index.ts
+
 export interface IProduct {
     id: string;
     title: string;
@@ -19,6 +21,27 @@ export interface IOrder {
 export interface IOrderResult {
     id: string;
     total: number;
+}
+
+export interface ICard {
+    update(data: {
+        id: string;
+        title: string;
+        price: string;
+        category?: string;
+        image?: string;
+    }): void;
+}
+
+export interface IBasketItem {
+    id: string;
+    title: string;
+    price: number;
+}
+
+export interface ApiListResponse<T> {
+    total: number;
+    items: T[];
 }
 
 export interface ICardActions {
