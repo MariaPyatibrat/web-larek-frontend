@@ -33,9 +33,23 @@ export class Modal extends Component<IModalData> {
 
     open() {
         this.container.classList.add('modal_active');
+        document.documentElement.classList.add('locked');
+        document.body.classList.add('locked');
+
+        const wrapper = document.querySelector('.page__wrapper');
+        if (wrapper instanceof HTMLElement) {
+            wrapper.classList.add('page__wrapper_locked');
+        }
     }
 
     close() {
         this.container.classList.remove('modal_active');
+        document.documentElement.classList.remove('locked');
+        document.body.classList.remove('locked');
+
+        const wrapper = document.querySelector('.page__wrapper');
+        if (wrapper instanceof HTMLElement) {
+            wrapper.classList.remove('page__wrapper_locked');
+        }
     }
 }

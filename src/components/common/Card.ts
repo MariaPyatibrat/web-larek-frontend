@@ -1,4 +1,3 @@
-// src/components/common/Card.ts
 import { ICard } from '../../types';
 import { ensureElement } from '../../utils/utils';
 
@@ -19,7 +18,6 @@ export class Card implements ICard {
         }
     }
 
-
     // Метод для обновления данных в карточке
     update(data: {
         id: string;
@@ -39,7 +37,7 @@ export class Card implements ICard {
         }
 
         if (this._category && category) {
-            this._category.textContent = category;
+            this.category = category; // Обновление через setter для категории
         }
 
         if (this._image && image) {
@@ -68,11 +66,45 @@ export class Card implements ICard {
     // Установка категории карточки
     set category(value: string) {
         if (this._category) {
-            this._category.className = 'card__category';
-            this._category.classList.add(`card__category_${value}`);
+            // Очистка всех старых классов категории
+            this._category.className = 'card__category'; // Сначала очищаем все старые классы
+
+            // Преобразуем категорию в правильный формат
+            let categoryValue = value.toLowerCase();
+
+
+            // В зависимости от значения category добавляем соответствующий класс
+            switch (categoryValue) {
+                case 'софт-скил':
+                case 'soft':
+                    this._category.classList.add('card__category_soft');
+                    break;
+                case 'хард-скил':
+                case 'hard':
+                    this._category.classList.add('card__category_hard');
+                    break;
+                case 'другое':
+                case 'other':
+                    this._category.classList.add('card__category_other');
+                    break;
+                case 'дополнительное':
+                case 'additional':
+                    this._category.classList.add('card__category_additional');
+                    break;
+                case 'кнопка':
+                case 'button':
+                    this._category.classList.add('card__category_button');
+                    break;
+                default:
+                    this._category.classList.add('card__category');
+                    break;
+            }
+
+            // Устанавливаем текст категории
             this.setText(this._category, value);
         }
     }
+
 
     // Утилита для установки текста в элемент
     private setText(element: HTMLElement, text: string): void {

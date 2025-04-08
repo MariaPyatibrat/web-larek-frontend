@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-
         // Инициализация контейнера корзины
         const basketTemplate = document.querySelector('#basket');
         let basketContainer: HTMLElement | null = null;
@@ -71,6 +70,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     image: product.image
                 });
 
+                // Добавляем обработчик события клика на карточку
+                cardElement.addEventListener('click', () => {
+                    events.emit('card:clicked', product); // Отправляем событие о клике
+                });
+
                 gallery.appendChild(cardElement);
             });
         });
@@ -114,6 +118,49 @@ document.addEventListener('DOMContentLoaded', async () => {
                 successModal.querySelector('.order-success__description')!.textContent =
                     `Списано ${result.total} синапсов`;
                 successModal.style.display = 'flex';
+            }
+        });
+
+        // Обработка клика на карточку товара для открытия модального окна
+        events.on('card:clicked', (product: IProduct) => {
+            const modal = document.querySelector('.modal') as HTMLElement;
+            const modalContent = modal.querySelector('.modal__content') as HTMLElement;
+
+            const template = document.querySelector('#card-preview') as HTMLTemplateElement;
+            if (!template) {
+                console.error('Шаблон предпросмотра карточки не найден!');
+                return;
+            }
+
+            const fragment = template.content.cloneNode(true) as DocumentFragment;
+            const modalCardElement = fragment.firstElementChild as HTMLElement;
+
+            const modalCard = new Card(modalCardElement);
+            modalCard.update({
+                id: product.id,
+                title: product.title,
+                price: `${product.price} синапсов`,
+                category: product.category,
+                image: product.image
+            });
+
+            // Устанавливаем описание отдельно (если есть .card__text)
+            const textElement = modalCardElement.querySelector('.card__text') as HTMLElement;
+            if (textElement) {
+                textElement.textContent = product.description;
+            }
+
+            // Устанавливаем содержимое модалки
+            modalContent.replaceChildren(modalCardElement);
+
+            // Открываем модалку
+            modal.classList.add('modal_active');
+            document.documentElement.classList.add('locked');
+            document.body.classList.add('locked');
+
+            const pageWrapper = document.querySelector('.page__wrapper') as HTMLElement;
+            if (pageWrapper) {
+                pageWrapper.classList.add('page__wrapper_locked');
             }
         });
 
