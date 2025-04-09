@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (basketContainer) {
-            new Basket(basketContainer);
+            new Basket(basketContainer, basketModel);  // Передаем basketModel в корзину
         }
 
         // Обработка клика по иконке корзины
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!basketContainer) return;
 
             const clonedBasket = basketContainer.cloneNode(true) as HTMLElement;
-            new Basket(clonedBasket); // Инициализируем заново (на случай, если нужны события и пр.)
+            new Basket(clonedBasket, basketModel); // Инициализируем корзину с моделью
 
             openModal(clonedBasket);
         });
@@ -103,8 +103,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         await productModel.load();
 
         // Обработка изменений в корзине
-        events.on<IProduct[]>('basket:changed', (items) => {
-            const basket = new Basket(basketContainer as HTMLElement);
+        events.on('basket:changed', (items: IProduct[]) => {
+            // Обновляем UI корзины
+            const basket = new Basket(basketContainer as HTMLElement, basketModel);
             basket.items = items.map(item => ({
                 id: item.id,
                 title: item.title,
@@ -176,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const addButton = modalCardElement.querySelector('.card__button');
             addButton?.addEventListener('click', () => {
-                basketModel.add(product);
+                basketModel.add(product);  // Используем метод add модели корзины
 
                 modal.classList.remove('modal_active');
                 document.documentElement.classList.remove('locked');
@@ -189,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Обработка события удаления товара из корзины
         events.on('basket:itemRemoved', (e: CustomEvent) => {
             const itemId = e.detail;
-            basketModel.handleItemRemoval(itemId); // Удаление товара из модели корзины
+            basketModel.handleItemRemoval(itemId); // Используем handleItemRemoval из модели
         });
 
     } catch (error) {

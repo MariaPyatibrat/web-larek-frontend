@@ -1,47 +1,47 @@
-import { ensureElement } from '../../utils/utils';
+import { BasketModel } from '../models/BasketModel';
 import { IBasketItem } from '../../types';
+import { ensureElement } from '../../utils/utils';
 
 export class Basket {
     protected _list: HTMLElement;
     protected _total: HTMLElement;
     protected _button: HTMLButtonElement;
+    private basketModel: BasketModel;  // Добавляем поле для модели корзины
 
-    constructor(protected container: HTMLElement) {
+    constructor(protected container: HTMLElement, basketModel: BasketModel) {
         this._list = ensureElement<HTMLElement>('.basket__list', container);
         this._total = ensureElement<HTMLElement>('.basket__price', container);
         this._button = container.querySelector('.basket__button, .button') as HTMLButtonElement;
 
+        this.basketModel = basketModel;  // Инициализируем модель корзины
+
         // Инициализация слушателя событий для кнопок удаления
         this._list.addEventListener('click', (e: Event) => {
             const target = e.target as HTMLElement;
-
-            // Проверяем, что кликнули на кнопку удаления
             if (target.classList.contains('basket__item-delete')) {
                 const itemId = target.closest('li')?.dataset.id;
                 if (itemId) {
-                    this.removeItem(itemId); // Удаление товара по id
+                    this.removeItem(itemId);  // Удаление товара по id
                 }
             }
         });
     }
 
-    // Метод для установки товаров в корзину
+    // Устанавливаем товары в корзину
     set items(items: IBasketItem[]) {
-        console.log('Updating items:', items); // Логируем для проверки
+        console.log('Updating items:', items);  // Логируем для проверки
 
-        this._list.innerHTML = ''; // Очищаем корзину
+        this._list.innerHTML = '';  // Очищаем корзину
 
-        // Если корзина пуста, показываем сообщение
         if (items.length === 0) {
-            console.log('Корзина пуста!'); // Логируем, если корзина пуста
+            console.log('Корзина пуста!');  // Логируем, если корзина пуста
             const emptyMessage = document.createElement('p');
             emptyMessage.textContent = 'Корзина пуста';
             this._list.appendChild(emptyMessage);
-            this.updateBasketCounter(0); // Обновляем счетчик корзины на 0
-            return; // Прерываем выполнение метода, чтобы не добавлять элементы
+            this.updateBasketCounter(0);  // Обновляем счетчик корзины на 0
+            return;
         }
 
-        // Иначе заполняем корзину товарами
         items.forEach((item, index) => {
             const li = document.createElement('li');
             li.classList.add('basket__item', 'card', 'card_compact');
@@ -55,28 +55,29 @@ export class Basket {
             this._list.appendChild(li);
         });
 
-        // Обновляем счетчик товаров в корзине
         this.updateBasketCounter(items.length);
     }
 
-    // Метод для удаления товара из корзины
+    // Удаляем товар через модель
     private removeItem(itemId: string) {
-        console.log(`Удаляем товар с ID: ${itemId}`); // Логируем удаление товара
+        console.log(`Удаляем товар с ID: ${itemId}`);  // Логируем удаление товара
         const item = this._list.querySelector(`[data-id="${itemId}"]`);
-        item?.remove();
+        if (item) {
+            item.remove();  // Убираем элемент из DOM
+        }
+
+        // Отправляем событие об изменении корзины
         this.container.dispatchEvent(new CustomEvent('basket:itemRemoved', { detail: itemId }));
 
         // Обновляем корзину после удаления товара
-        const currentItems = Array.from(this._list.querySelectorAll('li')).map((li) => li.dataset.id);
-        const remainingItems = currentItems.filter((id) => id !== itemId);
+        this.basketModel.handleItemRemoval(itemId);  // Используем метод модели для удаления товара
 
-        // Применяем обновление списка товаров
-        this.items = remainingItems.map((id) => {
-            return { id, title: 'Товар', price: 0 }; // Можете заменить на реальные данные
-        });
+        // Обновляем отображение корзины с актуальными данными
+        const updatedItems = this.basketModel.getItems();  // Получаем актуальные товары из модели
+        this.items = updatedItems;  // Обновляем отображение корзины
     }
 
-    // Метод для обновления счетчика товаров в корзине
+    // Обновляем счетчик товаров в корзине
     private updateBasketCounter(count: number) {
         const basketCounter = document.querySelector('.header__basket-counter') as HTMLElement;
         if (basketCounter) {
@@ -84,7 +85,7 @@ export class Basket {
         }
     }
 
-    // Метод для установки общей суммы в корзине
+    // Устанавливаем общую сумму
     set total(value: number) {
         this.setText(this._total, `${value} синапсов`);
     }
@@ -94,5 +95,3 @@ export class Basket {
         if (element) element.textContent = text;
     }
 }
-
-

@@ -22,10 +22,23 @@ export class ShopAPI extends Api {
     }
 
     async createOrder(order: IOrder): Promise<IOrderResult> {
-        const response = await this.post('/order', order);
-        if (!response || !(response as IOrderResult).id) {
-            throw new Error('Неверный формат данных заказа');
+        try {
+            const response = await this.post('/order', order);
+
+            if (!response) {
+                throw new Error('Отсутствует ответ от сервера');
+            }
+
+            // В этот момент response это просто объект, который пришел с сервера,
+            // предполагаем, что это IOrderResult
+            if ('id' in response) {
+                return response as IOrderResult;
+            } else {
+                throw new Error('Неверный формат данных заказа');
+            }
+        } catch (error) {
+            console.error('Ошибка при создании заказа:', error);
+            throw new Error('Не удалось создать заказ');
         }
-        return response as IOrderResult;
     }
 }
