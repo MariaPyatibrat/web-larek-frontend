@@ -1,4 +1,3 @@
-// src/components/common/Basket.ts
 import { ensureElement } from '../../utils/utils';
 import { IBasketItem } from '../../types';
 

@@ -169,37 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const basketFragment = basketTemplate.content.cloneNode(true) as DocumentFragment;
             modalContent.replaceChildren(basketFragment);
 
-            const basketList = modalContent.querySelector('.basket__list') as HTMLElement;
-            const currentItems = basketModel.getItems();
-
-            if (currentItems.length === 0) {
-                basketList.innerHTML = '<p>Корзина пуста</p>';
-            } else {
-                basketList.innerHTML = '';
-                currentItems.forEach((item, index) => {
-                    const basketItem = document.createElement('li');
-                    basketItem.classList.add('basket__item', 'card', 'card_compact');
-                    basketItem.innerHTML = `
-                        <span class="basket__item-index">${index + 1}</span>
-                        <span class="card__title">${item.title}</span>
-                        <span class="card__price">${item.price} синапсов</span>
-                        <button class="basket__item-delete" aria-label="удалить"></button>
-                    `;
-                    basketList.appendChild(basketItem);
-                });
-
-                basketList.querySelectorAll('.basket__item-delete').forEach(button => {
-                    button.addEventListener('click', (event) => {
-                        const basketItemElement = (event.target as HTMLElement).closest('.basket__item');
-                        if (basketItemElement) {
-                            const itemIndex = Array.from(basketItemElement.parentElement?.children || []).indexOf(basketItemElement);
-                            const itemToRemove = basketModel.getItems()[itemIndex];
-                            basketModel.remove(itemToRemove.id);
-                            updateBasketCounter();
-                        }
-                    });
-                });
-            }
+            updateBasketModal();
 
             modal.classList.add('modal_active');
             document.documentElement.classList.add('locked');
@@ -214,14 +184,67 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function updateBasketCounter() {
     const basketCounter = document.querySelector('.header__basket-counter') as HTMLElement;
-    console.log('[updateBasketCounter] Элемент найден:', !!basketCounter);
     if (basketCounter) {
         const itemCount = basketModel.getItems().length;
-        console.log('[updateBasketCounter] Кол-во товаров:', itemCount);
         basketCounter.textContent = itemCount.toString();
     } else {
         console.warn('⚠️ Элемент .header__basket-counter не найден!');
     }
+}
+
+function updateBasketModal() {
+    const modal = document.querySelector('.modal') as HTMLElement;
+    if (!modal) return console.error('Модальное окно не найдено');
+
+    const modalContent = modal.querySelector('.modal__content') as HTMLElement;
+    if (!modalContent) return console.error('Контент модального окна не найден');
+
+    const basketList = modalContent.querySelector('.basket__list') as HTMLElement;
+    if (!basketList) return console.error('Список товаров в корзине не найден');
+
+    // Очищаем корзину
+    basketList.innerHTML = '';
+
+    const items = basketModel.getItems();
+
+    if (items.length === 0) {
+        // Если корзина пуста, показываем сообщение
+        const emptyMessage = document.createElement('p');
+        emptyMessage.textContent = 'Корзина пуста';
+        basketList.appendChild(emptyMessage);
+    } else {
+        // Если товары есть, отображаем их
+        items.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.classList.add('basket__item', 'card', 'card_compact');
+            li.innerHTML = `
+                <span class="basket__item-index">${index + 1}</span>
+                <span class="card__title">${item.title}</span>
+                <span class="card__price">${item.price} синапсов</span>
+                <button class="basket__item-delete" aria-label="удалить"></button>
+            `;
+            basketList.appendChild(li);
+        });
+    }
+
+    const totalPrice = basketModel.getTotal();
+    const basketPrice = modalContent.querySelector('.basket__price') as HTMLElement;
+    if (basketPrice) {
+        basketPrice.textContent = `${totalPrice} синапсов`;
+    }
+
+    basketList.querySelectorAll('.basket__item-delete').forEach(button => {
+        button.addEventListener('click', (event) => {
+            const basketItemElement = (event.target as HTMLElement).closest('.basket__item');
+            if (basketItemElement) {
+                const itemIndex = Array.from(basketItemElement.parentElement?.children || []).indexOf(basketItemElement);
+                const itemToRemove = basketModel.getItems()[itemIndex];
+                basketModel.remove(itemToRemove.id);
+                updateBasketCounter();
+                updateBasketModal();
+            }
+        });
+    });
 }
 
 
