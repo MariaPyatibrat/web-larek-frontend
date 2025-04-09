@@ -1,4 +1,3 @@
-// src/components/models/BasketModel.ts
 import { EventEmitter } from '../base/events';
 import { IProduct, IOrder, IOrderResult } from '../../types';
 import { ShopAPI } from '../ShopApi';
@@ -44,6 +43,12 @@ export class BasketModel {
             throw error;
         }
     }
+
+    // Метод для обработки события удаления товара
+    handleItemRemoval(itemId: string) {
+        this.remove(itemId);
+    }
 }
+
 
 

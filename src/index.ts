@@ -186,11 +186,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
+        // Обработка события удаления товара из корзины
+        events.on('basket:itemRemoved', (e: CustomEvent) => {
+            const itemId = e.detail;
+            basketModel.handleItemRemoval(itemId); // Удаление товара из модели корзины
+        });
+
     } catch (error) {
         console.error('Ошибка инициализации:', error);
     }
 });
-
-
-
-
