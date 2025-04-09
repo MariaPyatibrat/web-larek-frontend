@@ -1,46 +1,46 @@
-// src/components/models/BasketModel.ts
-
-import { IProduct, IOrder, IOrderResult } from '../../types'; // Добавим импорт IProduct
+import { IProduct, IOrder, IOrderResult } from '../../types';
 import { ShopAPI } from '../ShopApi';
 import { EventEmitter } from '../base/events';
 
 export class BasketModel {
-    private items: IProduct[] = [];  // Массив товаров в корзине
+    private items: IProduct[] = [];
 
     constructor(private events: EventEmitter, private api: ShopAPI) {}
 
-    // Метод для получения элементов корзины
-    getItems(): IProduct[] {
-        return this.items;
-    }
-
-    // Метод для получения общей суммы
-    getTotal(): number {
-        return this.items.reduce((total, item) => total + item.price, 0);
-    }
-
-    // Добавление товара в корзину
+    // Метод для добавления товара в корзину
     add(product: IProduct) {
         this.items.push(product);
         this.events.emit('basket:changed', this.items);
     }
 
-    // Удаление товара из корзины
-    handleItemRemoval(itemId: string) {
-        this.items = this.items.filter(item => item.id !== itemId);
-        this.events.emit('basket:changed', this.items); // Сигнализируем об изменении корзины
+    // Метод для удаления товара по ID
+    remove(productId: string) {
+        const index = this.items.findIndex(item => item.id === productId);
+        if (index !== -1) {
+            this.items.splice(index, 1); // Удаляем товар
+            this.events.emit('basket:changed', this.items); // Обновляем корзину
+        }
     }
 
-    // Метод для создания заказа
-    async createOrder(orderData: IOrder): Promise<IOrderResult> {
-        try {
-            // Отправка данных заказа на сервер через API
-            const response = await this.api.createOrder(orderData);
+    // Получение всех товаров из корзины
+    getItems() {
+        return this.items;
+    }
 
-            return response; // Возвращаем результат, полученный с сервера
-        } catch (error) {
-            console.error('Ошибка при создании заказа', error);
-            throw new Error('Не удалось создать заказ');
-        }
+    // Получение общей суммы корзины
+    getTotal() {
+        return this.items.reduce((total, item) => total + item.price, 0);
+    }
+
+    // Логика для оформления заказа
+    async createOrder(orderData: IOrder) {
+        // Пример отправки данных на сервер
+        const response = await this.api.createOrder(orderData);
+        return response;
+    }
+
+    // Метод для обработки удаления товара из корзины
+    handleItemRemoval(itemId: string) {
+        this.remove(itemId);
     }
 }

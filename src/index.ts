@@ -147,7 +147,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Обработка клика на карточку товара
+
+        // При клике на карточку товара
         events.on('card:clicked', (product: IProduct) => {
             const template = document.querySelector('#card-preview') as HTMLTemplateElement;
             if (!template) {
@@ -175,9 +176,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Открываем модалку
             openModal(modalCardElement);
 
+            // Привязываем уникальный ID на кнопку удаления
+            const removeButton = modalCardElement.querySelector('.card__remove'); // Кнопка удаления
+            if (removeButton) {
+                removeButton.setAttribute('data-id', product.id); // Уникальный атрибут для каждой карточки
+            }
+
+            // Обработчик клика на кнопку добавления в корзину
             const addButton = modalCardElement.querySelector('.card__button');
             addButton?.addEventListener('click', () => {
-                basketModel.add(product);  // Используем метод add модели корзины
+                basketModel.add(product);
 
                 modal.classList.remove('modal_active');
                 document.documentElement.classList.remove('locked');
@@ -185,7 +193,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const pageWrapper = document.querySelector('.page__wrapper') as HTMLElement;
                 pageWrapper?.classList.remove('page__wrapper_locked');
             });
+
+            // Обработчик клика на кнопку удаления
+            removeButton?.addEventListener('click', () => {
+                const productId = removeButton.getAttribute('data-id');
+                if (productId) {
+                    basketModel.remove(productId);  // Теперь можно вызвать метод remove
+                    modal.classList.remove('modal_active');
+                    document.documentElement.classList.remove('locked');
+                    document.body.classList.remove('locked');
+                    const pageWrapper = document.querySelector('.page__wrapper') as HTMLElement;
+                    pageWrapper?.classList.remove('page__wrapper_locked');
+                }
+            });
         });
+
 
         // Обработка события удаления товара из корзины
         events.on('basket:itemRemoved', (e: CustomEvent) => {

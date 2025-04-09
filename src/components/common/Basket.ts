@@ -1,3 +1,5 @@
+// src/components/common/Basket.ts
+
 import { BasketModel } from '../models/BasketModel';
 import { IBasketItem } from '../../types';
 import { ensureElement } from '../../utils/utils';
@@ -6,14 +8,14 @@ export class Basket {
     protected _list: HTMLElement;
     protected _total: HTMLElement;
     protected _button: HTMLButtonElement;
-    private basketModel: BasketModel;  // Добавляем поле для модели корзины
+    private basketModel: BasketModel;
 
     constructor(protected container: HTMLElement, basketModel: BasketModel) {
         this._list = ensureElement<HTMLElement>('.basket__list', container);
         this._total = ensureElement<HTMLElement>('.basket__price', container);
         this._button = container.querySelector('.basket__button, .button') as HTMLButtonElement;
 
-        this.basketModel = basketModel;  // Инициализируем модель корзины
+        this.basketModel = basketModel;
 
         // Инициализация слушателя событий для кнопок удаления
         this._list.addEventListener('click', (e: Event) => {
@@ -29,16 +31,16 @@ export class Basket {
 
     // Устанавливаем товары в корзину
     set items(items: IBasketItem[]) {
-        console.log('Updating items:', items);  // Логируем для проверки
+        console.log('Updating items:', items);
 
-        this._list.innerHTML = '';  // Очищаем корзину
+        this._list.innerHTML = '';
 
         if (items.length === 0) {
-            console.log('Корзина пуста!');  // Логируем, если корзина пуста
+            console.log('Корзина пуста!');
             const emptyMessage = document.createElement('p');
             emptyMessage.textContent = 'Корзина пуста';
             this._list.appendChild(emptyMessage);
-            this.updateBasketCounter(0);  // Обновляем счетчик корзины на 0
+            this.updateBasketCounter(0);
             return;
         }
 
@@ -51,7 +53,7 @@ export class Basket {
                 <span class="card__price">${item.price} синапсов</span>
                 <button class="basket__item-delete" aria-label="удалить"></button>
             `;
-            li.dataset.id = item.id;
+            li.dataset.id = item.id;  // Устанавливаем уникальный ID для каждого товара
             this._list.appendChild(li);
         });
 
@@ -61,6 +63,8 @@ export class Basket {
     // Удаляем товар через модель
     private removeItem(itemId: string) {
         console.log(`Удаляем товар с ID: ${itemId}`);  // Логируем удаление товара
+
+        // Удаляем товар из DOM по уникальному ID
         const item = this._list.querySelector(`[data-id="${itemId}"]`);
         if (item) {
             item.remove();  // Убираем элемент из DOM
