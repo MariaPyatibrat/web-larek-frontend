@@ -37,7 +37,8 @@ export class Basket {
             this._list.appendChild(emptyMessage);
 
             this.updateBasketCounter(0);
-            this._button.disabled = true; // 👉 Делаем кнопку неактивной
+            this._button.disabled = true;
+            this.total = 0; // 👉 Обнуляем сумму
             return;
         }
 
@@ -55,8 +56,12 @@ export class Basket {
         });
 
         this.updateBasketCounter(items.length);
-        this._button.disabled = false; // 👉 Делаем кнопку активной, если есть товары
+        this._button.disabled = false;
+
+        const totalPrice = items.reduce((sum, item) => sum + item.price, 0); // 👉 Пересчитываем сумму
+        this.total = totalPrice; // 👉 Обновляем UI
     }
+
 
 
     // Удаляем товар через модель
