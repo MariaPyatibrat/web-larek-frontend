@@ -48,8 +48,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (basketContainer) {
-            new Basket(basketContainer, basketModel);  // Передаем basketModel в корзину
+            const basketView = new Basket(basketContainer, basketModel);
+            basketView.items = basketModel.getItems();
+            basketView.total = basketModel.getTotal();
         }
+
 
         // Обработка клика по иконке корзины
         const basketButton = document.querySelector('.header__basket') as HTMLElement;

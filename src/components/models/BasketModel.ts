@@ -1,4 +1,4 @@
-import { IProduct, IOrder, IOrderResult } from '../../types';
+import { IProduct, IOrder } from '../../types';
 import { ShopAPI } from '../ShopApi';
 import { EventEmitter } from '../base/events';
 

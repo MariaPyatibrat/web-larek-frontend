@@ -1,5 +1,3 @@
-// src/components/common/Basket.ts
-
 import { BasketModel } from '../models/BasketModel';
 import { IBasketItem } from '../../types';
 import { ensureElement } from '../../utils/utils';
@@ -31,16 +29,15 @@ export class Basket {
 
     // Устанавливаем товары в корзину
     set items(items: IBasketItem[]) {
-        console.log('Updating items:', items);
-
         this._list.innerHTML = '';
 
         if (items.length === 0) {
-            console.log('Корзина пуста!');
             const emptyMessage = document.createElement('p');
             emptyMessage.textContent = 'Корзина пуста';
             this._list.appendChild(emptyMessage);
+
             this.updateBasketCounter(0);
+            this._button.disabled = true; // 👉 Делаем кнопку неактивной
             return;
         }
 
@@ -48,17 +45,19 @@ export class Basket {
             const li = document.createElement('li');
             li.classList.add('basket__item', 'card', 'card_compact');
             li.innerHTML = `
-                <span class="basket__item-index">${index + 1}</span>
-                <span class="card__title">${item.title}</span>
-                <span class="card__price">${item.price} синапсов</span>
-                <button class="basket__item-delete" aria-label="удалить"></button>
-            `;
-            li.dataset.id = item.id;  // Устанавливаем уникальный ID для каждого товара
+            <span class="basket__item-index">${index + 1}</span>
+            <span class="card__title">${item.title}</span>
+            <span class="card__price">${item.price} синапсов</span>
+            <button class="basket__item-delete" aria-label="удалить"></button>
+        `;
+            li.dataset.id = item.id;
             this._list.appendChild(li);
         });
 
         this.updateBasketCounter(items.length);
+        this._button.disabled = false; // 👉 Делаем кнопку активной, если есть товары
     }
+
 
     // Удаляем товар через модель
     private removeItem(itemId: string) {
