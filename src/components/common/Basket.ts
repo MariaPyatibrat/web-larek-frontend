@@ -1,3 +1,4 @@
+// src/components/common/Basket.ts
 import { ensureElement } from '../../utils/utils';
 import { IBasketItem } from '../../types';
 
@@ -15,9 +16,15 @@ export class Basket {
     // Метод для установки товаров в корзину
     set items(items: IBasketItem[]) {
         this._list.innerHTML = ''; // Очищаем корзину
-        items.forEach(item => {
+        items.forEach((item, index) => {
             const li = document.createElement('li');
-            li.textContent = `${item.title} - ${item.price} синапсов`;
+            li.classList.add('basket__item', 'card', 'card_compact');
+            li.innerHTML = `
+        <span class="basket__item-index">${index + 1}</span>
+        <span class="card__title">${item.title}</span>
+        <span class="card__price">${item.price} синапсов</span>
+        <button class="basket__item-delete" aria-label="удалить"></button>
+    `;
             li.dataset.id = item.id;
             this._list.appendChild(li);
         });
@@ -33,3 +40,4 @@ export class Basket {
         if (element) element.textContent = text;
     }
 }
+

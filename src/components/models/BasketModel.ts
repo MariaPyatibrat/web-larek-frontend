@@ -1,3 +1,4 @@
+// src/components/models/BasketModel.ts
 import { EventEmitter } from '../base/events';
 import { IProduct, IOrder, IOrderResult } from '../../types';
 import { ShopAPI } from '../ShopApi';
@@ -10,13 +11,13 @@ export class BasketModel {
     add(product: IProduct): void {
         if (!this.items.some(item => item.id === product.id)) {
             this.items.push(product);
-            this.events.emit('basket:changed', this.items);
+            this.events.emit('basket:changed', this.items); // Сигнализируем о том, что корзина обновилась
         }
     }
 
     remove(productId: string): void {
         this.items = this.items.filter(item => item.id !== productId);
-        this.events.emit('basket:changed', this.items);
+        this.events.emit('basket:changed', this.items); // Сигнализируем о том, что корзина обновилась
     }
 
     getItems(): IProduct[] {
@@ -24,19 +25,19 @@ export class BasketModel {
     }
 
     getTotal(): number {
-        return this.items.reduce((total, item) => total + item.price, 0);
+        return this.items.reduce((total, item) => total + item.price, 0); // Общая стоимость корзины
     }
 
     clear(): void {
         this.items = [];
-        this.events.emit('basket:changed', this.items);
+        this.events.emit('basket:changed', this.items); // Сигнализируем о том, что корзина обновилась
     }
 
     async createOrder(order: IOrder): Promise<IOrderResult> {
         try {
             const result = await this.api.createOrder(order);
-            this.events.emit('order:completed', result);
-            this.clear();
+            this.events.emit('order:completed', result); // Сигнализируем о завершении заказа
+            this.clear(); // Очищаем корзину
             return result;
         } catch (error) {
             console.error('Ошибка при создании заказа:', error);
@@ -44,4 +45,5 @@ export class BasketModel {
         }
     }
 }
+
 

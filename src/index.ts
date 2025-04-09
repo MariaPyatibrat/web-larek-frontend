@@ -5,7 +5,7 @@ import { ProductModel } from './components/models/ProductModel';
 import { BasketModel } from './components/models/BasketModel';
 import { Card } from './components/common/Card';
 import { Basket } from './components/common/Basket';
-import { API_URL, CDN_URL } from "./utils/constants";
+import { API_URL, CDN_URL } from './utils/constants';
 import { Modal } from './components/common/Modal';
 import { IProduct, IOrder, IOrderResult } from './types';
 
@@ -15,9 +15,8 @@ const productModel = new ProductModel(events, api);
 const basketModel = new BasketModel(events, api);
 
 document.addEventListener('DOMContentLoaded', async () => {
-    let basket: Basket | null = null;
-
     try {
+        // Инициализация модальных окон
         const modalContainers = document.querySelectorAll('.modal');
         modalContainers.forEach(container => {
             if (container instanceof HTMLElement) {
@@ -25,6 +24,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
+        const modal = document.querySelector('.modal') as HTMLElement;
+        const modalContent = modal.querySelector('.modal__content') as HTMLElement;
+
+        const openModal = (content: HTMLElement) => {
+            modalContent.replaceChildren(content);
+            modal.classList.add('modal_active');
+            document.documentElement.classList.add('locked');
+            document.body.classList.add('locked');
+
+            const pageWrapper = document.querySelector('.page__wrapper') as HTMLElement;
+            pageWrapper?.classList.add('page__wrapper_locked');
+        };
+
+        // Инициализация контейнера корзины
         const basketTemplate = document.querySelector('#basket');
         let basketContainer: HTMLElement | null = null;
 
@@ -35,24 +48,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (basketContainer) {
-            basket = new Basket(basketContainer);
-            console.log('Корзина инициализирована:', basket);
+            new Basket(basketContainer);
         }
 
-        events.on('products:loaded', (products: IProduct[]) => {
-            console.log('Товары пришли!', products);
+        // Обработка клика по иконке корзины
+        const basketButton = document.querySelector('.header__basket') as HTMLElement;
+        basketButton?.addEventListener('click', () => {
+            if (!basketContainer) return;
 
+            const clonedBasket = basketContainer.cloneNode(true) as HTMLElement;
+            new Basket(clonedBasket); // Инициализируем заново (на случай, если нужны события и пр.)
+
+            openModal(clonedBasket);
+        });
+
+        // Подписка на products:loaded
+        events.on('products:loaded', (products: IProduct[]) => {
             const gallery = document.querySelector('.gallery');
-            if (!gallery) return console.error('Галерея не найдена!');
+            if (!gallery) {
+                console.error('Галерея не найдена!');
+                return;
+            }
 
             const cardTemplate = document.querySelector('#card-catalog') as HTMLTemplateElement;
-            if (!cardTemplate) return console.error('Шаблон карточки не найден!');
+            if (!cardTemplate) {
+                console.error('Шаблон карточки не найден!');
+                return;
+            }
 
             gallery.innerHTML = '';
 
             products.forEach(product => {
                 const fragment = cardTemplate.content.cloneNode(true) as DocumentFragment;
                 const cardElement = fragment.firstElementChild as HTMLElement;
+
                 const card = new Card(cardElement);
 
                 card.update({
@@ -67,39 +96,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                     events.emit('card:clicked', product);
                 });
 
-                const addToBasketButton = cardElement.querySelector('.card__button') as HTMLElement;
-                if (addToBasketButton) {
-                    addToBasketButton.addEventListener('click', () => {
-                        if (basket) {
-                            basketModel.add(product);
-                            updateBasketCounter();
-                        } else {
-                            console.error('Корзина не инициализирована!');
-                        }
-                    });
-                }
-
                 gallery.appendChild(cardElement);
             });
         });
 
         await productModel.load();
 
+        // Обработка изменений в корзине
         events.on<IProduct[]>('basket:changed', (items) => {
-            console.log('Обновлены товары в корзине:', items);
-            if (basket) {
-                basket.items = items.map(item => ({
-                    id: item.id,
-                    title: item.title,
-                    price: item.price
-                }));
-                basket.total = basketModel.getTotal();
-                updateBasketCounter();
+            const basket = new Basket(basketContainer as HTMLElement);
+            basket.items = items.map(item => ({
+                id: item.id,
+                title: item.title,
+                price: item.price
+            }));
+            basket.total = basketModel.getTotal();
+
+            const basketCounter = document.querySelector('.header__basket-counter') as HTMLElement;
+            if (basketCounter) {
+                basketCounter.textContent = items.length.toString();
             }
         });
 
+        // Обработка оформления заказа
         const orderForm = document.querySelector('.order') as HTMLFormElement;
-        orderForm.addEventListener('submit', async (e) => {
+        orderForm?.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const formData = new FormData(orderForm);
@@ -115,6 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await basketModel.createOrder(orderData);
         });
 
+        // Обработка успешного заказа
         events.on<IOrderResult>('order:completed', (result) => {
             const successModal = document.querySelector('.modal_success') as HTMLElement;
             if (successModal) {
@@ -124,15 +146,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
+        // Обработка клика на карточку товара
         events.on('card:clicked', (product: IProduct) => {
-            const modal = document.querySelector('.modal') as HTMLElement;
-            if (!modal) return console.error('Модальное окно не найдено');
-
-            const modalContent = modal.querySelector('.modal__content') as HTMLElement;
-            if (!modalContent) return console.error('Содержимое модального окна не найдено');
-
             const template = document.querySelector('#card-preview') as HTMLTemplateElement;
-            if (!template) return console.error('Шаблон предпросмотра карточки не найден!');
+            if (!template) {
+                console.error('Шаблон предпросмотра карточки не найден!');
+                return;
+            }
 
             const fragment = template.content.cloneNode(true) as DocumentFragment;
             const modalCardElement = fragment.firstElementChild as HTMLElement;
@@ -147,34 +167,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             const textElement = modalCardElement.querySelector('.card__text') as HTMLElement;
-            if (textElement) textElement.textContent = product.description;
-
-            modalContent.replaceChildren(modalCardElement);
-            modal.classList.add('modal_active');
-            document.documentElement.classList.add('locked');
-            document.body.classList.add('locked');
-            document.querySelector('.page__wrapper')?.classList.add('page__wrapper_locked');
-        });
-
-        const basketButton = document.querySelector('.header__basket') as HTMLElement;
-        basketButton.addEventListener('click', () => {
-            const modal = document.querySelector('.modal') as HTMLElement;
-            const modalContent = modal.querySelector('.modal__content') as HTMLElement;
-            const basketTemplate = document.querySelector('#basket') as HTMLTemplateElement;
-
-            if (!basketTemplate || !modal || !modalContent) {
-                return console.error('Не найдены элементы модалки или шаблон корзины!');
+            if (textElement) {
+                textElement.textContent = product.description;
             }
 
-            const basketFragment = basketTemplate.content.cloneNode(true) as DocumentFragment;
-            modalContent.replaceChildren(basketFragment);
+            // Открываем модалку
+            openModal(modalCardElement);
 
-            updateBasketModal();
+            const addButton = modalCardElement.querySelector('.card__button');
+            addButton?.addEventListener('click', () => {
+                basketModel.add(product);
 
-            modal.classList.add('modal_active');
-            document.documentElement.classList.add('locked');
-            document.body.classList.add('locked');
-            document.querySelector('.page__wrapper')?.classList.add('page__wrapper_locked');
+                modal.classList.remove('modal_active');
+                document.documentElement.classList.remove('locked');
+                document.body.classList.remove('locked');
+                const pageWrapper = document.querySelector('.page__wrapper') as HTMLElement;
+                pageWrapper?.classList.remove('page__wrapper_locked');
+            });
         });
 
     } catch (error) {
@@ -182,69 +191,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-function updateBasketCounter() {
-    const basketCounter = document.querySelector('.header__basket-counter') as HTMLElement;
-    if (basketCounter) {
-        const itemCount = basketModel.getItems().length;
-        basketCounter.textContent = itemCount.toString();
-    } else {
-        console.warn('⚠️ Элемент .header__basket-counter не найден!');
-    }
-}
 
-function updateBasketModal() {
-    const modal = document.querySelector('.modal') as HTMLElement;
-    if (!modal) return console.error('Модальное окно не найдено');
-
-    const modalContent = modal.querySelector('.modal__content') as HTMLElement;
-    if (!modalContent) return console.error('Контент модального окна не найден');
-
-    const basketList = modalContent.querySelector('.basket__list') as HTMLElement;
-    if (!basketList) return console.error('Список товаров в корзине не найден');
-
-    // Очищаем корзину
-    basketList.innerHTML = '';
-
-    const items = basketModel.getItems();
-
-    if (items.length === 0) {
-        // Если корзина пуста, показываем сообщение
-        const emptyMessage = document.createElement('p');
-        emptyMessage.textContent = 'Корзина пуста';
-        basketList.appendChild(emptyMessage);
-    } else {
-        // Если товары есть, отображаем их
-        items.forEach((item, index) => {
-            const li = document.createElement('li');
-            li.classList.add('basket__item', 'card', 'card_compact');
-            li.innerHTML = `
-                <span class="basket__item-index">${index + 1}</span>
-                <span class="card__title">${item.title}</span>
-                <span class="card__price">${item.price} синапсов</span>
-                <button class="basket__item-delete" aria-label="удалить"></button>
-            `;
-            basketList.appendChild(li);
-        });
-    }
-
-    const totalPrice = basketModel.getTotal();
-    const basketPrice = modalContent.querySelector('.basket__price') as HTMLElement;
-    if (basketPrice) {
-        basketPrice.textContent = `${totalPrice} синапсов`;
-    }
-
-    basketList.querySelectorAll('.basket__item-delete').forEach(button => {
-        button.addEventListener('click', (event) => {
-            const basketItemElement = (event.target as HTMLElement).closest('.basket__item');
-            if (basketItemElement) {
-                const itemIndex = Array.from(basketItemElement.parentElement?.children || []).indexOf(basketItemElement);
-                const itemToRemove = basketModel.getItems()[itemIndex];
-                basketModel.remove(itemToRemove.id);
-                updateBasketCounter();
-                updateBasketModal();
-            }
-        });
-    });
-}
 
 
