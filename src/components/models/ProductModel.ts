@@ -1,23 +1,27 @@
-import { EventEmitter } from '../base/events';
 import { IProduct } from '../../types';
+import { EventEmitter } from '../base/events';
 import { ShopAPI } from '../ShopApi';
 
 export class ProductModel {
-    private products: IProduct[] = [];
+    constructor(
+        protected events: EventEmitter,
+        protected api: ShopAPI
+    ) {}
 
-    constructor(private events: EventEmitter, private api: ShopAPI) {}
+    protected _items: IProduct[] = [];
+
+    get items() {
+        return this._items;
+    }
 
     async load(): Promise<void> {
         try {
-            this.products = await this.api.getProductList();
-            this.events.emit('products:loaded', this.products);
+            const data = await this.api.getProductList();
+            this._items = data;
+            this.events.emit('products:loaded', this._items);
         } catch (error) {
-            console.error('Ошибка при загрузке продуктов:', error);
-            throw error;
+            console.error('Ошибка при загрузке товаров:', error);
         }
     }
 
-    getProductById(id: string): IProduct | undefined {
-        return this.products.find(item => item.id === id);
-    }
 }

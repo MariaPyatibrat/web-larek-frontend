@@ -28,6 +28,7 @@ export class Basket {
     }
 
     // Устанавливаем товары в корзину
+    // Убираем проверку на состояние корзины, всегда активируем кнопку
     set items(items: IBasketItem[]) {
         this._list.innerHTML = '';
 
@@ -37,32 +38,30 @@ export class Basket {
             this._list.appendChild(emptyMessage);
 
             this.updateBasketCounter(0);
-            this._button.disabled = true;
             this.total = 0; // 👉 Обнуляем сумму
-            return;
-        }
-
-        items.forEach((item, index) => {
-            const li = document.createElement('li');
-            li.classList.add('basket__item', 'card', 'card_compact');
-            li.innerHTML = `
+        } else {
+            items.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.classList.add('basket__item', 'card', 'card_compact');
+                li.innerHTML = `
             <span class="basket__item-index">${index + 1}</span>
             <span class="card__title">${item.title}</span>
             <span class="card__price">${item.price} синапсов</span>
             <button class="basket__item-delete" aria-label="удалить"></button>
         `;
-            li.dataset.id = item.id;
-            this._list.appendChild(li);
-        });
+                li.dataset.id = item.id;
+                this._list.appendChild(li);
+            });
 
-        this.updateBasketCounter(items.length);
-        this._button.disabled = false;
+            this.updateBasketCounter(items.length);
 
-        const totalPrice = items.reduce((sum, item) => sum + item.price, 0); // 👉 Пересчитываем сумму
-        this.total = totalPrice; // 👉 Обновляем UI
+            const totalPrice = items.reduce((sum, item) => sum + item.price, 0); // 👉 Пересчитываем сумму
+            this.total = totalPrice; // 👉 Обновляем UI
+        }
+
+        // Теперь кнопка всегда активна
+        this._button.disabled = false;  // Убираем блокировку кнопки
     }
-
-
 
     // Удаляем товар через модель
     private removeItem(itemId: string) {

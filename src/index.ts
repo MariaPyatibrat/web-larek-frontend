@@ -28,6 +28,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const modalContent = modal.querySelector('.modal__content') as HTMLElement;
 
         const openModal = (content: HTMLElement) => {
+            const modal = document.querySelector('.modal') as HTMLElement;
+            const modalContent = modal.querySelector('.modal__content') as HTMLElement;
+
+            // Заменяем содержимое модального окна на переданный контент (например, форму заказа или корзину)
             modalContent.replaceChildren(content);
             modal.classList.add('modal_active');
             document.documentElement.classList.add('locked');
@@ -35,6 +39,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const pageWrapper = document.querySelector('.page__wrapper') as HTMLElement;
             pageWrapper?.classList.add('page__wrapper_locked');
+        };
+
+        // Функция для закрытия модального окна
+        const closeModal = () => {
+            const modal = document.querySelector('.modal') as HTMLElement;
+            if (modal) {
+                modal.classList.remove('modal_active');
+                document.documentElement.classList.remove('locked');
+                document.body.classList.remove('locked');
+
+                const pageWrapper = document.querySelector('.page__wrapper') as HTMLElement;
+                pageWrapper?.classList.remove('page__wrapper_locked');
+            }
         };
 
         // Инициализация контейнера корзины
@@ -53,17 +70,76 @@ document.addEventListener('DOMContentLoaded', async () => {
             basketView.total = basketModel.getTotal();
         }
 
-
-        // Обработка клика по иконке корзины
+        // Обработка клика по иконке корзины (открытие корзины)
         const basketButton = document.querySelector('.header__basket') as HTMLElement;
-        basketButton?.addEventListener('click', () => {
-            if (!basketContainer) return;
+        if (basketButton) {
+            basketButton.addEventListener('click', (event: MouseEvent) => {
+                console.log('Корзина открыта');
 
-            const clonedBasket = basketContainer.cloneNode(true) as HTMLElement;
-            new Basket(clonedBasket, basketModel); // Инициализируем корзину с моделью
+                // Получаем шаблон корзины
+                const basketTemplate = document.querySelector('#basket') as HTMLTemplateElement;
+                if (!basketTemplate) {
+                    console.error('Шаблон корзины не найден!');
+                    return;
+                }
 
-            openModal(clonedBasket);
-        });
+                // Клонируем и добавляем корзину в модальное окно
+                const basketForm = basketTemplate.content.cloneNode(true) as DocumentFragment;
+                const basketFormElement = basketForm.firstElementChild as HTMLElement;
+
+                // Открываем модальное окно с корзиной
+                openModal(basketFormElement);
+
+                // Обработка клика по кнопке "Оформить заказ"
+                const orderButton = basketFormElement.querySelector('.basket__button') as HTMLElement;
+                if (orderButton) {
+                    orderButton.addEventListener('click', (event: MouseEvent) => {
+                        console.log('Кнопка "Оформить заказ" нажата');
+
+                        // Получаем шаблон формы заказа
+                        const orderTemplate = document.querySelector('#order') as HTMLTemplateElement;
+                        if (!orderTemplate) {
+                            console.error('Шаблон формы заказа не найден!');
+                            return;
+                        }
+
+                        // Клонируем и добавляем форму заказа в модальное окно
+                        const orderForm = orderTemplate.content.cloneNode(true) as DocumentFragment;
+                        const orderFormElement = orderForm.firstElementChild as HTMLElement;
+
+                        // Открываем модальное окно с формой заказа
+                        openModal(orderFormElement);
+
+                        // Включаем кнопку "Далее" после выбора способа оплаты
+                        const paymentButtons = orderFormElement.querySelectorAll('.order__buttons button');
+                        const submitButton = orderFormElement.querySelector('.order__button') as HTMLButtonElement;
+                        paymentButtons.forEach(button => {
+                            button.addEventListener('click', () => {
+                                // Разблокируем кнопку "Далее" после выбора способа оплаты
+                                submitButton.disabled = false;
+                            });
+                        });
+
+                        // Обработка отправки формы
+                        orderFormElement.querySelector('form')?.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+
+                            const formData = new FormData(e.target as HTMLFormElement);
+                            const orderData: IOrder = {
+                                payment: formData.get('payment') as 'online' | 'offline',
+                                address: formData.get('address') as string,
+                                email: formData.get('email') as string,
+                                phone: formData.get('phone') as string,
+                                items: basketModel.getItems().map(item => item.id),
+                                total: basketModel.getTotal()
+                            };
+
+                            await basketModel.createOrder(orderData);
+                        });
+                    });
+                }
+            });
+        }
 
         // Подписка на products:loaded
         events.on('products:loaded', (products: IProduct[]) => {
@@ -150,9 +226,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-
-        // При клике на карточку товара
+        // Открытие карточки товара
         events.on('card:clicked', (product: IProduct) => {
+            console.log('Карточка кликается:', product);
+
             const template = document.querySelector('#card-preview') as HTMLTemplateElement;
             if (!template) {
                 console.error('Шаблон предпросмотра карточки не найден!');
@@ -178,44 +255,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Открываем модалку
             openModal(modalCardElement);
+            console.log('Модалка открыта.');
 
             // Привязываем уникальный ID на кнопку удаления
-            const removeButton = modalCardElement.querySelector('.card__remove'); // Кнопка удаления
+            const removeButton = modalCardElement.querySelector('.card__remove');
             if (removeButton) {
-                removeButton.setAttribute('data-id', product.id); // Уникальный атрибут для каждой карточки
+                removeButton.setAttribute('data-id', product.id);
             }
 
             // Обработчик клика на кнопку добавления в корзину
             const addButton = modalCardElement.querySelector('.card__button');
             addButton?.addEventListener('click', () => {
                 basketModel.add(product);
+                console.log('Товар добавлен в корзину:', product);
 
-                modal.classList.remove('modal_active');
-                document.documentElement.classList.remove('locked');
-                document.body.classList.remove('locked');
-                const pageWrapper = document.querySelector('.page__wrapper') as HTMLElement;
-                pageWrapper?.classList.remove('page__wrapper_locked');
+                closeModal(); // Закрыть модальное окно после добавления товара в корзину
             });
 
             // Обработчик клика на кнопку удаления
             removeButton?.addEventListener('click', () => {
                 const productId = removeButton.getAttribute('data-id');
                 if (productId) {
-                    basketModel.remove(productId);  // Теперь можно вызвать метод remove
-                    modal.classList.remove('modal_active');
-                    document.documentElement.classList.remove('locked');
-                    document.body.classList.remove('locked');
-                    const pageWrapper = document.querySelector('.page__wrapper') as HTMLElement;
-                    pageWrapper?.classList.remove('page__wrapper_locked');
+                    basketModel.remove(productId);
+                    console.log('Товар удален из корзины:', productId);
+
+                    closeModal(); // Закрыть модальное окно после удаления товара
                 }
             });
-        });
-
-
-        // Обработка события удаления товара из корзины
-        events.on('basket:itemRemoved', (e: CustomEvent) => {
-            const itemId = e.detail;
-            basketModel.handleItemRemoval(itemId); // Используем handleItemRemoval из модели
         });
 
     } catch (error) {
