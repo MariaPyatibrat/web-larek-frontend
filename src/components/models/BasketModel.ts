@@ -43,4 +43,10 @@ export class BasketModel {
     handleItemRemoval(itemId: string) {
         this.remove(itemId);
     }
+
+    // Новый метод для полной очистки корзины
+    clear() {
+        this.items = [];
+        this.events.emit('basket:changed', this.items);
+    }
 }

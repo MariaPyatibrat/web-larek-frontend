@@ -9,6 +9,7 @@ import { API_URL, CDN_URL } from './utils/constants';
 import { Modal } from './components/common/Modal';
 import { IProduct, IOrderResult, IOrder } from './types';
 import { CheckoutForm } from './components/common/CheckoutForm';
+import { ValidationService } from './components/common/ValidationService';
 
 const events = new EventEmitter();
 const api = new ShopAPI(CDN_URL, API_URL);
@@ -112,30 +113,72 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const contactsFormElement = contactsFormFragment.querySelector('form');
                     if (!contactsFormElement) return;
 
+                    // Добавляем валидацию для формы контактов
+                    const emailInput = contactsFormElement.querySelector('input[name="email"]');
+                    const phoneInput = contactsFormElement.querySelector('input[name="phone"]');
+                    const errorSpan = contactsFormElement.querySelector('.form__errors');
+                    const submitButton = contactsFormElement.querySelector('button[type="submit"]');
+
+                    const validateContactsForm = () => {
+                        if (!emailInput || !phoneInput || !errorSpan || !submitButton) return;
+
+                        const email = (emailInput as HTMLInputElement).value;
+                        const phone = (phoneInput as HTMLInputElement).value;
+
+                        const errors: string[] = [];
+
+                        const emailError = ValidationService.validateEmail(email);
+                        if (emailError) errors.push(emailError);
+
+                        const phoneError = ValidationService.validatePhone(phone);
+                        if (phoneError) errors.push(phoneError);
+
+                        errorSpan.textContent = errors.join('\n');
+                        (submitButton as HTMLButtonElement).disabled = errors.length > 0;
+                    };
+
+                    emailInput?.addEventListener('input', validateContactsForm);
+                    phoneInput?.addEventListener('input', validateContactsForm);
+                    emailInput?.addEventListener('blur', validateContactsForm);
+                    phoneInput?.addEventListener('blur', validateContactsForm);
+
+                    // Изначальная валидация
+                    validateContactsForm();
+
                     openModal(contactsFormElement as HTMLElement);
 
                     const handleSubmit = async (submitEvent: SubmitEvent) => {
                         submitEvent.preventDefault();
 
-                        const emailInput = contactsFormElement.querySelector('input[name="email"]') as HTMLInputElement;
-                        const phoneInput = contactsFormElement.querySelector('input[name="phone"]') as HTMLInputElement;
+                        const email = (emailInput as HTMLInputElement)?.value;
+                        const phone = (phoneInput as HTMLInputElement)?.value;
 
-                        const email = emailInput?.value;
-                        const phone = phoneInput?.value;
+                        // Финальная проверка перед отправкой
+                        const errors: string[] = [];
 
-                        if (!email || !phone) {
-                            const errorSpan = contactsFormElement.querySelector('.form__errors');
-                            if (errorSpan) errorSpan.textContent = 'Пожалуйста, заполните все поля!';
+                        const emailError = ValidationService.validateEmail(email);
+                        if (emailError) errors.push(emailError);
+
+                        const phoneError = ValidationService.validatePhone(phone);
+                        if (phoneError) errors.push(phoneError);
+
+                        if (errors.length > 0) {
+                            errorSpan.textContent = errors.join('\n');
                             return;
                         }
+
+                        // Получаем данные из формы заказа
+                        const orderForm = document.querySelector('.order__form form');
+                        const address = orderForm?.querySelector('input[name="address"]') as HTMLInputElement;
+                        const paymentMethod = orderForm?.querySelector('.button_alt-active')?.getAttribute('name');
 
                         const orderData: IOrder = {
                             email,
                             phone,
                             items: basketModel.getItems().map(item => item.id),
                             total: basketModel.getTotal(),
-                            payment: 'online',
-                            address: 'Some address',
+                            payment: paymentMethod === 'card' ? 'online' : 'offline',
+                            address: address?.value || '',
                         };
 
                         try {
@@ -153,14 +196,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 }
 
                                 const closeButton = successElement.querySelector('.button');
-                                closeButton?.addEventListener('click', closeModal);
+                                closeButton?.addEventListener('click', () => {
+                                    closeModal();
+                                    basketModel.clear(); // Очищаем корзину после успешного заказа
+                                });
 
                                 openModal(successElement as HTMLElement);
                             }
                         } catch (error) {
                             console.error('Ошибка отправки заказа:', error);
-                            const errorSpan = contactsFormElement.querySelector('.form__errors');
-                            if (errorSpan) errorSpan.textContent = 'Произошла ошибка при отправке заказа. Попробуйте еще раз.';
+                            errorSpan.textContent = 'Произошла ошибка при отправке заказа. Попробуйте еще раз.';
                         }
                     };
 
