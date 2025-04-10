@@ -47,3 +47,8 @@ export interface ApiListResponse<T> {
 export interface ICardActions {
     onClick: (event: MouseEvent) => void;
 }
+
+export interface IFormState {
+    valid: boolean;
+    errors: string;
+}
