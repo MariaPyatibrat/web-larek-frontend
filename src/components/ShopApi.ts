@@ -29,8 +29,6 @@ export class ShopAPI extends Api {
                 throw new Error('Отсутствует ответ от сервера');
             }
 
-            // В этот момент response это просто объект, который пришел с сервера,
-            // предполагаем, что это IOrderResult
             if ('id' in response) {
                 return response as IOrderResult;
             } else {

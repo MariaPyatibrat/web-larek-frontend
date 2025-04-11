@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('Скрипт загружен и DOM готов!');
 
     try {
-        // Модальные окна
         const modalContainers = document.querySelectorAll('.modal');
         modalContainers.forEach(container => {
             if (container instanceof HTMLElement) {
@@ -28,52 +27,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        const modal = document.querySelector('.modal');
-        if (!modal || !(modal instanceof HTMLElement)) {
-            throw new Error('Modal container not found or not HTMLElement');
-        }
+        const modal = document.querySelector('.modal') as HTMLElement | null;
+        if (!modal) throw new Error('Modal container not found');
 
-        const modalContent = modal.querySelector('.modal__content');
-        if (!modalContent || !(modalContent instanceof HTMLElement)) {
-            throw new Error('Modal content not found or not HTMLElement');
-        }
+        const modalContent = modal.querySelector('.modal__content') as HTMLElement | null;
+        if (!modalContent) throw new Error('Modal content not found');
 
         const openModal = (content: HTMLElement) => {
-            if (!(modal instanceof HTMLElement)) return;
-            if (!(modalContent instanceof HTMLElement)) return;
-
             modalContent.replaceChildren(content);
             modal.classList.add('modal_active');
             document.documentElement.classList.add('locked');
             document.body.classList.add('locked');
 
             const pageWrapper = document.querySelector('.page__wrapper');
-            if (pageWrapper) {
+            if (pageWrapper instanceof HTMLElement) {
                 pageWrapper.classList.add('page__wrapper_locked');
             }
         };
 
         const closeModal = () => {
-            if (!(modal instanceof HTMLElement)) return;
-
             modal.classList.remove('modal_active');
             document.documentElement.classList.remove('locked');
             document.body.classList.remove('locked');
 
             const pageWrapper = document.querySelector('.page__wrapper');
-            if (pageWrapper) {
+            if (pageWrapper instanceof HTMLElement) {
                 pageWrapper.classList.remove('page__wrapper_locked');
             }
         };
 
-        // Контейнер корзины
-        const basketTemplate = document.querySelector('#basket');
+        const basketTemplate = document.querySelector('#basket') as HTMLTemplateElement | null;
         let basketContainer: HTMLElement | null = null;
 
-        if (basketTemplate instanceof HTMLTemplateElement) {
-            basketContainer = basketTemplate.content.querySelector('.basket');
+        if (basketTemplate) {
+            basketContainer = basketTemplate.content.querySelector('.basket') as HTMLElement | null;
         } else {
-            basketContainer = document.querySelector('.basket');
+            basketContainer = document.querySelector('.basket') as HTMLElement | null;
         }
 
         if (!basketContainer) throw new Error('Basket container not found');
@@ -82,7 +71,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         basketView.items = basketModel.getItems();
         basketView.total = basketModel.getTotal();
 
-        // Кнопка корзины
         const basketButton = document.querySelector('.header__basket');
         basketButton?.addEventListener('click', () => {
             if (!basketContainer) return;
@@ -94,37 +82,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const orderButton = clonedBasket.querySelector('.basket__button');
             orderButton?.addEventListener('click', () => {
-                const orderTemplate = document.querySelector('#order');
-                if (!(orderTemplate instanceof HTMLTemplateElement)) return;
+                const orderTemplate = document.querySelector('#order') as HTMLTemplateElement | null;
+                if (!orderTemplate) return;
 
                 const orderFormFragment = orderTemplate.content.cloneNode(true) as DocumentFragment;
-                const orderFormElement = orderFormFragment.querySelector('form');
+                const orderFormElement = orderFormFragment.querySelector('form') as HTMLFormElement | null;
                 if (!orderFormElement) return;
 
                 const checkout = new CheckoutForm(basketModel);
-                checkout.initializeOrderForm(orderFormElement as HTMLFormElement);
+                checkout.initializeOrderForm(orderFormElement);
 
                 const nextButton = orderFormElement.querySelector('.order__button');
                 nextButton?.addEventListener('click', () => {
-                    const contactsTemplate = document.querySelector('#contacts');
-                    if (!(contactsTemplate instanceof HTMLTemplateElement)) return;
+                    const contactsTemplate = document.querySelector('#contacts') as HTMLTemplateElement | null;
+                    if (!contactsTemplate) return;
 
                     const contactsFormFragment = contactsTemplate.content.cloneNode(true) as DocumentFragment;
-                    const contactsFormElement = contactsFormFragment.querySelector('form');
+                    const contactsFormElement = contactsFormFragment.querySelector('form') as HTMLFormElement | null;
                     if (!contactsFormElement) return;
 
-                    // Добавляем валидацию для формы контактов
-                    const emailInput = contactsFormElement.querySelector('input[name="email"]');
-                    const phoneInput = contactsFormElement.querySelector('input[name="phone"]');
-                    const errorSpan = contactsFormElement.querySelector('.form__errors');
-                    const submitButton = contactsFormElement.querySelector('button[type="submit"]');
+                    const emailInput = contactsFormElement.querySelector('input[name="email"]') as HTMLInputElement | null;
+                    const phoneInput = contactsFormElement.querySelector('input[name="phone"]') as HTMLInputElement | null;
+                    const errorSpan = contactsFormElement.querySelector('.form__errors') as HTMLElement | null;
+                    const submitButton = contactsFormElement.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+
+                    if (!emailInput || !phoneInput || !errorSpan || !submitButton) return;
 
                     const validateContactsForm = () => {
-                        if (!emailInput || !phoneInput || !errorSpan || !submitButton) return;
-
-                        const email = (emailInput as HTMLInputElement).value;
-                        const phone = (phoneInput as HTMLInputElement).value;
-
+                        const email = emailInput.value;
+                        const phone = phoneInput.value;
                         const errors: string[] = [];
 
                         const emailError = ValidationService.validateEmail(email);
@@ -134,27 +120,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (phoneError) errors.push(phoneError);
 
                         errorSpan.textContent = errors.join('\n');
-                        (submitButton as HTMLButtonElement).disabled = errors.length > 0;
+                        submitButton.disabled = errors.length > 0;
                     };
 
-                    emailInput?.addEventListener('input', validateContactsForm);
-                    phoneInput?.addEventListener('input', validateContactsForm);
-                    emailInput?.addEventListener('blur', validateContactsForm);
-                    phoneInput?.addEventListener('blur', validateContactsForm);
+                    emailInput.addEventListener('input', validateContactsForm);
+                    phoneInput.addEventListener('input', validateContactsForm);
+                    emailInput.addEventListener('blur', validateContactsForm);
+                    phoneInput.addEventListener('blur', validateContactsForm);
 
-                    // Изначальная валидация
                     validateContactsForm();
+                    openModal(contactsFormElement);
 
-                    openModal(contactsFormElement as HTMLElement);
-
-                    const handleSubmit = async (submitEvent: SubmitEvent) => {
+                    contactsFormElement.addEventListener('submit', async (submitEvent) => {
                         submitEvent.preventDefault();
 
-                        const email = (emailInput as HTMLInputElement)?.value;
-                        const phone = (phoneInput as HTMLInputElement)?.value;
-
-                        // Финальная проверка перед отправкой
+                        const email = emailInput.value;
+                        const phone = phoneInput.value;
+                        const orderData = basketModel.getOrderData();
                         const errors: string[] = [];
+
+                        if (!orderData.address) errors.push('Адрес не указан');
+                        if (!orderData.payment) errors.push('Способ оплаты не выбран');
 
                         const emailError = ValidationService.validateEmail(email);
                         if (emailError) errors.push(emailError);
@@ -167,71 +153,61 @@ document.addEventListener('DOMContentLoaded', async () => {
                             return;
                         }
 
-                        // Получаем данные из формы заказа
-                        const orderForm = document.querySelector('.order__form form');
-                        const address = orderForm?.querySelector('input[name="address"]') as HTMLInputElement;
-                        const paymentMethod = orderForm?.querySelector('.button_alt-active')?.getAttribute('name');
-
-                        const orderData: IOrder = {
-                            email,
-                            phone,
-                            items: basketModel.getItems().map(item => item.id),
-                            total: basketModel.getTotal(),
-                            payment: paymentMethod === 'card' ? 'online' : 'offline',
-                            address: address?.value || '',
-                        };
-
                         try {
-                            const result = await api.createOrder(orderData);
+                            const result = await api.createOrder({
+                                email,
+                                phone,
+                                address: orderData.address,
+                                payment: orderData.payment,
+                                items: basketModel.getItems().map(item => item.id),
+                                total: basketModel.getTotal()
+                            });
 
-                            const successTemplate = document.querySelector('#success');
-                            if (successTemplate instanceof HTMLTemplateElement) {
-                                const successFragment = successTemplate.content.cloneNode(true) as DocumentFragment;
-                                const successElement = successFragment.querySelector('.order-success');
-                                if (!successElement) return;
+                            const successTemplate = document.querySelector('#success') as HTMLTemplateElement | null;
+                            if (successTemplate) {
+                                const successContent = successTemplate.content.cloneNode(true) as DocumentFragment;
+                                const successElement = successContent.querySelector('.order-success') as HTMLElement | null;
 
-                                const description = successElement.querySelector('.order-success__description');
-                                if (description) {
-                                    description.textContent = `Списано ${result.total} синапсов`;
+                                if (successElement) {
+                                    const description = successElement.querySelector('.order-success__description');
+                                    if (description) {
+                                        description.textContent = `Списано ${result.total} синапсов`;
+                                    }
+
+                                    successElement.querySelector('.button')?.addEventListener('click', () => {
+                                        closeModal();
+                                        basketModel.clear();
+                                    });
+
+                                    openModal(successElement);
                                 }
-
-                                const closeButton = successElement.querySelector('.button');
-                                closeButton?.addEventListener('click', () => {
-                                    closeModal();
-                                    basketModel.clear(); // Очищаем корзину после успешного заказа
-                                });
-
-                                openModal(successElement as HTMLElement);
                             }
                         } catch (error) {
-                            console.error('Ошибка отправки заказа:', error);
-                            errorSpan.textContent = 'Произошла ошибка при отправке заказа. Попробуйте еще раз.';
+                            console.error('Ошибка заказа:', error);
+                            errorSpan.textContent = 'Ошибка при оформлении заказа. Попробуйте ещё раз.';
                         }
-                    };
-
-                    contactsFormElement.addEventListener('submit', handleSubmit);
+                    });
                 });
 
-                openModal(orderFormElement as HTMLElement);
+                openModal(orderFormElement);
             });
 
             openModal(clonedBasket);
         });
 
-        // Загрузка товаров
         events.on('products:loaded', (products: IProduct[]) => {
-            const gallery = document.querySelector('.gallery');
-            const cardTemplate = document.querySelector('#card-catalog');
+            const gallery = document.querySelector('.gallery') as HTMLElement | null;
+            const cardTemplate = document.querySelector('#card-catalog') as HTMLTemplateElement | null;
 
-            if (!gallery || !(cardTemplate instanceof HTMLTemplateElement)) return;
+            if (!gallery || !cardTemplate) return;
 
             gallery.innerHTML = '';
             products.forEach(product => {
                 const fragment = cardTemplate.content.cloneNode(true) as DocumentFragment;
-                const cardElement = fragment.querySelector('.card');
+                const cardElement = fragment.querySelector('.card') as HTMLElement | null;
                 if (!cardElement) return;
 
-                const card = new Card(cardElement as HTMLElement);
+                const card = new Card(cardElement);
                 card.update({
                     id: product.id,
                     title: product.title,
@@ -250,7 +226,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         await productModel.load();
 
-        // Изменения в корзине
         events.on('basket:changed', (items: IProduct[]) => {
             if (!basketContainer) return;
 
@@ -263,16 +238,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             basket.total = basketModel.getTotal();
         });
 
-        // Клик по карточке
         events.on('card:clicked', (product: IProduct) => {
-            const template = document.querySelector('#card-preview');
-            if (!(template instanceof HTMLTemplateElement)) return;
+            const template = document.querySelector('#card-preview') as HTMLTemplateElement | null;
+            if (!template) return;
 
             const fragment = template.content.cloneNode(true) as DocumentFragment;
-            const modalCardElement = fragment.querySelector('.card');
+            const modalCardElement = fragment.querySelector('.card') as HTMLElement | null;
             if (!modalCardElement) return;
 
-            const modalCard = new Card(modalCardElement as HTMLElement);
+            const modalCard = new Card(modalCardElement);
             modalCard.update({
                 id: product.id,
                 title: product.title,
@@ -299,7 +273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 closeModal();
             });
 
-            openModal(modalCardElement as HTMLElement);
+            openModal(modalCardElement);
         });
 
     } catch (error) {

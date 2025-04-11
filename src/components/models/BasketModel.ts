@@ -4,49 +4,54 @@ import { EventEmitter } from '../base/events';
 
 export class BasketModel {
     private items: IProduct[] = [];
+    private orderData: Partial<IOrder> = {}; // Добавляем хранилище для данных заказа
 
     constructor(private events: EventEmitter, private api: ShopAPI) {}
 
-    // Метод для добавления товара в корзину
+    // Добавляем методы для работы с данными заказа
+    setOrderField<K extends keyof IOrder>(field: K, value: IOrder[K]) {
+        this.orderData[field] = value;
+        this.events.emit('order:changed', this.orderData);
+    }
+
+    getOrderData(): Partial<IOrder> {
+        return this.orderData;
+    }
+
+    // Остальные методы остаются без изменений
     add(product: IProduct) {
         this.items.push(product);
         this.events.emit('basket:changed', this.items);
     }
 
-    // Метод для удаления товара по ID
     remove(productId: string) {
         const index = this.items.findIndex(item => item.id === productId);
         if (index !== -1) {
-            this.items.splice(index, 1); // Удаляем товар
-            this.events.emit('basket:changed', this.items); // Обновляем корзину
+            this.items.splice(index, 1);
+            this.events.emit('basket:changed', this.items);
         }
     }
 
-    // Получение всех товаров из корзины
     getItems() {
         return this.items;
     }
 
-    // Получение общей суммы корзины
     getTotal() {
         return this.items.reduce((total, item) => total + item.price, 0);
     }
 
-    // Логика для оформления заказа
     async createOrder(orderData: IOrder) {
-        // Пример отправки данных на сервер
         const response = await this.api.createOrder(orderData);
         return response;
     }
 
-    // Метод для обработки удаления товара из корзины
     handleItemRemoval(itemId: string) {
         this.remove(itemId);
     }
 
-    // Новый метод для полной очистки корзины
     clear() {
         this.items = [];
+        this.orderData = {};
         this.events.emit('basket:changed', this.items);
     }
 }
