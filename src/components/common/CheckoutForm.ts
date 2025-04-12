@@ -1,59 +1,81 @@
-import { ValidationService } from './ValidationService';
 import { BasketModel } from '../models/BasketModel';
+import { ValidationService } from './ValidationService';
+
+interface OrderData {
+    address?: string;
+    payment?: 'online' | 'offline';
+}
+
+const PaymentMethods = {
+    ONLINE: 'online',
+    OFFLINE: 'offline'
+} as const;
 
 export class CheckoutForm {
     constructor(private basketModel: BasketModel) {}
 
     public initializeOrderForm(formElement: HTMLFormElement): void {
-        const errorsContainer = formElement.querySelector('.form__errors') as HTMLElement | null;
         const submitButton = formElement.querySelector('.order__button') as HTMLButtonElement | null;
+        const errorsContainer = formElement.querySelector('.form__errors') as HTMLElement | null;
 
         if (!errorsContainer || !submitButton) {
-            console.error('Required elements not found');
-            return;
+            throw new Error('Required form elements not found');
         }
 
-        const savedData = this.basketModel.getOrderData();
-        const addressInput = formElement.querySelector('input[name="address"]') as HTMLInputElement | null;
-        if (addressInput && savedData.address) {
+        submitButton.disabled = true;
+        const savedData = this.basketModel.getOrderData() as OrderData;
+
+        this.initAddressField(formElement, savedData, errorsContainer, submitButton);
+        this.initPaymentButtons(formElement, savedData, errorsContainer, submitButton);
+
+        this.validateOrderForm(formElement, errorsContainer, submitButton);
+    }
+
+    private initAddressField(
+        form: HTMLFormElement,
+        savedData: OrderData,
+        errorsContainer: HTMLElement,
+        submitButton: HTMLButtonElement
+    ) {
+        const addressInput = form.querySelector('input[name="address"]') as HTMLInputElement | null;
+        if (!addressInput) return;
+
+        if (savedData.address) {
             addressInput.value = savedData.address;
         }
 
-        const paymentButtons = formElement.querySelectorAll('.order__buttons button');
+        addressInput.addEventListener('input', () => {
+            this.basketModel.setOrderField('address', addressInput.value);
+            this.validateOrderForm(form, errorsContainer, submitButton);
+        });
+    }
+
+    private initPaymentButtons(
+        form: HTMLFormElement,
+        savedData: OrderData,
+        errorsContainer: HTMLElement,
+        submitButton: HTMLButtonElement
+    ) {
+        const paymentButtons = form.querySelectorAll('.order__buttons button');
         paymentButtons.forEach(button => {
-            if (button.getAttribute('name') === savedData.payment) {
+            const paymentType = button.getAttribute('name') === 'card'
+                ? PaymentMethods.ONLINE
+                : PaymentMethods.OFFLINE;
+
+            if (paymentType === savedData.payment) {
                 button.classList.add('button_alt-active');
             }
 
             button.addEventListener('click', () => {
                 paymentButtons.forEach(btn => btn.classList.remove('button_alt-active'));
                 button.classList.add('button_alt-active');
-                this.basketModel.setOrderField('payment', button.getAttribute('name') === 'card' ? 'online' : 'offline');
-                this.validateForm(formElement, errorsContainer, submitButton);
+                this.basketModel.setOrderField('payment', paymentType);
+                this.validateOrderForm(form, errorsContainer, submitButton);
             });
-        });
-
-        formElement.querySelectorAll('input').forEach(input => {
-            input.addEventListener('input', () => {
-                if (input.name === 'address') {
-                    this.basketModel.setOrderField('address', input.value);
-                }
-                this.validateForm(formElement, errorsContainer, submitButton);
-            });
-        });
-
-        this.validateForm(formElement, errorsContainer, submitButton);
-
-        formElement.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const orderData = this.basketModel.getOrderData();
-            if (orderData.address && orderData.payment) {
-                submitButton!.disabled = true;
-            }
         });
     }
 
-    private validateForm(
+    private validateOrderForm(
         form: HTMLFormElement,
         errorsContainer: HTMLElement,
         submitButton: HTMLButtonElement

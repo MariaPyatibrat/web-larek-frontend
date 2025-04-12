@@ -10,7 +10,9 @@ export class ValidationService {
     }
 
     static validateEmail(email: string): string | null {
-        if (!email) return null; // Опциональное поле
+        if (!email || email.trim().length === 0) {
+            return 'Необходимо указать email';
+        }
 
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(email)) {
@@ -20,7 +22,9 @@ export class ValidationService {
     }
 
     static validatePhone(phone: string): string | null {
-        if (!phone) return null; // Опциональное поле
+        if (!phone || phone.trim().length === 0) {
+            return 'Необходимо указать телефон';
+        }
 
         const phonePattern = /^\+?[0-9]{10,15}$/;
         if (!phonePattern.test(phone)) {
